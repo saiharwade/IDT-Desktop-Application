@@ -277,6 +277,7 @@ class FocusPanel(QFrame):
             }}
         """)
         self.setFixedHeight(180)
+        self.setFixedWidth(470)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(26, 22, 26, 20)
@@ -340,7 +341,7 @@ class HomePage(QWidget):
 
         # Top bar
         top_bar = QFrame()
-        top_bar.setFixedHeight(60)
+        top_bar.setFixedHeight(75)
         top_bar.setStyleSheet(f"""
             QFrame {{
                 background-color: #F8F8F8;
@@ -349,18 +350,18 @@ class HomePage(QWidget):
         """)
 
         top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(8, 6, 8, 6)
+        top_layout.setContentsMargins(12, 10, 12, 10)
         top_layout.setSpacing(0)
 
         left_widget = QWidget()
         left_header_layout = QHBoxLayout(left_widget)
         left_header_layout.setContentsMargins(0, 0, 0, 0)
-        left_header_layout.setSpacing(6)
+        left_header_layout.setSpacing(10)
 
-        logo_circle = ImageLabel(logo_path, 24, 24)
+        logo_circle = ImageLabel(logo_path, 32, 32)
 
         brand_text = QLabel("SYD-PRO")
-        brand_font = QFont("Segoe UI", 12)
+        brand_font = QFont("Segoe UI", 16)
         brand_font.setBold(True)
         brand_text.setFont(brand_font)
         brand_text.setStyleSheet(f"color: {text_color};")
@@ -370,7 +371,7 @@ class HomePage(QWidget):
         left_header_layout.addStretch()
 
         title = QLabel("HOME")
-        title_font = QFont("Segoe UI", 12)
+        title_font = QFont("Segoe UI", 16)
         title_font.setBold(True)
         title.setFont(title_font)
         title.setAlignment(Qt.AlignCenter)
@@ -504,9 +505,12 @@ class HomePage(QWidget):
 
         right_layout.addWidget(form_widget)
 
+        # gap after form (~1 cm visual)
+        right_layout.addSpacing(36)
+
         # Button row
         icon_row = QHBoxLayout()
-        icon_row.setContentsMargins(24, 6, 24, 0)
+        icon_row.setContentsMargins(24, 0, 24, 0)
         icon_row.setSpacing(10)
 
         self.btn_jewellery = SymbolButton("jewellery", has_arrow=True)
@@ -523,13 +527,22 @@ class HomePage(QWidget):
 
         right_layout.addLayout(icon_row)
 
-        # Focus panel
+        # gap between icons and focus panel
+        right_layout.addSpacing(24)
+
+        # Focus panel centered precisely
+        focus_row = QHBoxLayout()
+        focus_row.setContentsMargins(0, 0, 0, 0)
+        focus_row.addStretch()
         self.focus_panel = FocusPanel(gold_border)
-        right_layout.addWidget(self.focus_panel)
+        focus_row.addWidget(self.focus_panel)
+        focus_row.addStretch()
+
+        right_layout.addLayout(focus_row)
 
         right_layout.addStretch()
 
-        # Bottom buttons
+        # Bottom buttons centered
         bottom_btn_row = QHBoxLayout()
         bottom_btn_row.setContentsMargins(8, 2, 8, 8)
         bottom_btn_row.setSpacing(22)
@@ -568,6 +581,7 @@ class HomePage(QWidget):
             }}
         """)
 
+        bottom_btn_row.addStretch()
         bottom_btn_row.addWidget(scan_btn)
         bottom_btn_row.addWidget(adv_btn)
         bottom_btn_row.addStretch()

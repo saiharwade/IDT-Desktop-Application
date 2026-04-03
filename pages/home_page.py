@@ -316,8 +316,9 @@ class FocusPanel(QFrame):
 
 
 class HomePage(QWidget):
-    def __init__(self):
+    def __init__(self, stacked_widget=None):
         super().__init__()
+        self.stacked_widget = stacked_widget
         self.setWindowTitle("IDT Desktop Application")
         self.setStyleSheet("background-color: #F8F8F8;")
         self.resize_to_screen()
@@ -326,6 +327,10 @@ class HomePage(QWidget):
     def resize_to_screen(self):
         desktop = QDesktopWidget().availableGeometry()
         self.resize(desktop.width(), desktop.height())
+
+    def open_compare_page(self):
+        if self.stacked_widget is not None:
+            self.stacked_widget.setCurrentIndex(4)
 
     def setup_ui(self):
         gold_border = "#DCC374"
@@ -505,7 +510,7 @@ class HomePage(QWidget):
 
         right_layout.addWidget(form_widget)
 
-        # gap after form (~1 cm visual)
+        # gap after form
         right_layout.addSpacing(36)
 
         # Button row
@@ -519,6 +524,8 @@ class HomePage(QWidget):
         self.btn_history = SymbolButton("history")
         self.btn_settings = SymbolButton("settings")
 
+        self.btn_jewellery.clicked.connect(self.open_compare_page)
+
         icon_row.addWidget(self.btn_jewellery)
         icon_row.addWidget(self.btn_scan)
         icon_row.addWidget(self.btn_report)
@@ -530,7 +537,7 @@ class HomePage(QWidget):
         # gap between icons and focus panel
         right_layout.addSpacing(24)
 
-        # Focus panel centered precisely
+        # Focus panel centered
         focus_row = QHBoxLayout()
         focus_row.setContentsMargins(0, 0, 0, 0)
         focus_row.addStretch()

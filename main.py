@@ -18,10 +18,10 @@ class MainWindow(QMainWindow):
         self.stack = QStackedWidget()
 
         self.login_page = LoginPage()
-        self.home_page = HomePage()
+        self.home_page = HomePage(self.stack)
         self.history_page = HistoryPage()
         self.result_page = ResultPage()
-        self.compare_page = ComparePage()
+        self.compare_page = ComparePage(self.stack)
 
         self.stack.addWidget(self.login_page)    # index 0
         self.stack.addWidget(self.home_page)     # index 1
@@ -40,6 +40,8 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())

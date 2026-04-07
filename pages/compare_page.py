@@ -116,7 +116,7 @@ class ComparePage(QWidget):
         if self.stacked_widget is not None:
             self.stacked_widget.setCurrentIndex(1)
 
-    def make_small_button(self, text, w=34, h=28):
+    def make_small_button(self, text, w=34, h=30):
         btn = QPushButton(text)
         btn.setFixedSize(w, h)
         btn.setStyleSheet("""
@@ -126,7 +126,7 @@ class ComparePage(QWidget):
                 border-radius: 5px;
                 color: #222222;
                 font-family: Segoe UI;
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 500;
             }
             QPushButton:hover {
@@ -135,7 +135,7 @@ class ComparePage(QWidget):
         """)
         return btn
 
-    def make_action_button(self, text, w=110, h=30, font_size=10):
+    def make_action_button(self, text, w=110, h=34, font_size=11):
         btn = QPushButton(text)
         btn.setFixedSize(w, h)
         btn.setStyleSheet(f"""
@@ -154,7 +154,7 @@ class ComparePage(QWidget):
         """)
         return btn
 
-    def make_value_box(self, text="00", w=46, h=28):
+    def make_value_box(self, text="00", w=50, h=30):
         box = QLabel(text)
         box.setAlignment(Qt.AlignCenter)
         box.setFixedSize(w, h)
@@ -165,7 +165,8 @@ class ComparePage(QWidget):
                 border-radius: 4px;
                 color: #333333;
                 font-family: Segoe UI;
-                font-size: 10px;
+                font-size: 11px;
+                font-weight: 500;
             }
         """)
         return box
@@ -261,8 +262,8 @@ class ComparePage(QWidget):
         """)
 
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(22, 16, 22, 16)
-        right_layout.setSpacing(12)
+        right_layout.setContentsMargins(24, 16, 24, 16)
+        right_layout.setSpacing(10)
 
         # Logo block
         logo_row = QHBoxLayout()
@@ -296,12 +297,12 @@ class ComparePage(QWidget):
         # Inputs - refined
         form_widget = QWidget()
         form_layout = QGridLayout(form_widget)
-        form_layout.setContentsMargins(20, 12, 20, 0)
-        form_layout.setHorizontalSpacing(20)
-        form_layout.setVerticalSpacing(16)
+        form_layout.setContentsMargins(24, 10, 24, 0)
+        form_layout.setHorizontalSpacing(16)
+        form_layout.setVerticalSpacing(12)
 
-        label_font = QFont("Segoe UI", 12)
-        input_font = QFont("Segoe UI", 12)
+        label_font = QFont("Segoe UI", 11)
+        input_font = QFont("Segoe UI", 11)
 
         for row, txt in enumerate(["HPHT:", "CVD:"]):
             lab = QLabel(txt)
@@ -310,7 +311,7 @@ class ComparePage(QWidget):
 
             inp = QLineEdit()
             inp.setFont(input_font)
-            inp.setFixedHeight(32)
+            inp.setFixedHeight(34)
             inp.setStyleSheet(f"""
                 QLineEdit {{
                     background: #F8F8F8;
@@ -328,13 +329,13 @@ class ComparePage(QWidget):
 
         # + 00 -
         step_row = QHBoxLayout()
-        step_row.setContentsMargins(0, 10, 0, 0)
-        step_row.setSpacing(12)
+        step_row.setContentsMargins(0, 8, 0, 0)
+        step_row.setSpacing(10)
         step_row.setAlignment(Qt.AlignCenter)
 
-        plus_btn = self.make_small_button("+", 30, 28)
+        plus_btn = self.make_small_button("+", 32, 30)
         minus_btn = self.make_small_button("−", 30, 28)
-        value_box = self.make_value_box("00", 46, 28)
+        value_box = self.make_value_box("00", 50, 30)
 
         step_row.addWidget(plus_btn)
         step_row.addWidget(value_box)
@@ -344,12 +345,12 @@ class ComparePage(QWidget):
 
         # High gain / Simulant
         row_btns = QHBoxLayout()
-        row_btns.setContentsMargins(0, 10, 0, 0)
-        row_btns.setSpacing(18)
+        row_btns.setContentsMargins(0, 8, 0, 0)
+        row_btns.setSpacing(12)
         row_btns.setAlignment(Qt.AlignCenter)
 
-        high_gain_btn = self.make_action_button("High gain", 110, 28, 9)
-        simulant_btn = self.make_action_button("Simulant", 100, 28, 9)
+        high_gain_btn = self.make_action_button("High gain", 126, 34, 11)
+        simulant_btn = self.make_action_button("Simulant", 118, 34, 11)
 
         row_btns.addWidget(high_gain_btn)
         row_btns.addWidget(simulant_btn)
@@ -357,9 +358,9 @@ class ComparePage(QWidget):
         right_layout.addLayout(row_btns)
 
         # Advance Analysis
-        adv_btn = self.make_action_button("Advance Analysis", 150, 30, 9)
+        adv_btn = self.make_action_button("Advance Analysis", 170, 34, 11)
         adv_wrap = QHBoxLayout()
-        adv_wrap.setContentsMargins(0, 6, 0, 0)
+        adv_wrap.setContentsMargins(0, 8, 0, 0)
         adv_wrap.setAlignment(Qt.AlignCenter)
         adv_wrap.addWidget(adv_btn)
 
@@ -368,16 +369,16 @@ class ComparePage(QWidget):
         # Bars
         bars_widget = QWidget()
         bars_layout = QGridLayout(bars_widget)
-        bars_layout.setContentsMargins(60, 10, 60, 0)
-        bars_layout.setHorizontalSpacing(18)
-        bars_layout.setVerticalSpacing(12)
+        bars_layout.setContentsMargins(42, 8, 42, 0)
+        bars_layout.setHorizontalSpacing(16)
+        bars_layout.setVerticalSpacing(10)
 
         bar_labels = ["Gain:", "Exposer:", "Shutter:", "ISO:"]
         fills = [7, 6, 5, 5]
 
         for i, (txt, fill) in enumerate(zip(bar_labels, fills)):
             lab = QLabel(txt)
-            lab.setFont(QFont("Segoe UI", 10))
+            lab.setFont(QFont("Segoe UI", 11))
             lab.setStyleSheet("color: #333333; border: none;")
 
             bar = StripeBar(fill)

@@ -109,17 +109,12 @@ class ComparePage(QWidget):
     def __init__(self, stacked_widget=None):
         super().__init__()
         self.stacked_widget = stacked_widget
-        self.analysis_visible = False
         self.setStyleSheet("background-color: #F8F8F8;")
         self.setup_ui()
 
     def go_home(self):
         if self.stacked_widget is not None:
             self.stacked_widget.setCurrentIndex(1)
-
-    def toggle_advanced_analysis(self):
-        self.analysis_visible = not self.analysis_visible
-        self.bars_widget.setVisible(self.analysis_visible)
 
     def make_small_button(self, text, w=34, h=28):
         btn = QPushButton(text)
@@ -363,7 +358,6 @@ class ComparePage(QWidget):
 
         # Advance Analysis
         adv_btn = self.make_action_button("Advance Analysis", 150, 30, 9)
-        adv_btn.clicked.connect(self.toggle_advanced_analysis)
         adv_wrap = QHBoxLayout()
         adv_wrap.setContentsMargins(0, 6, 0, 0)
         adv_wrap.setAlignment(Qt.AlignCenter)
@@ -372,8 +366,8 @@ class ComparePage(QWidget):
         right_layout.addLayout(adv_wrap)
 
         # Bars
-        self.bars_widget = QWidget()
-        bars_layout = QGridLayout(self.bars_widget)
+        bars_widget = QWidget()
+        bars_layout = QGridLayout(bars_widget)
         bars_layout.setContentsMargins(60, 10, 60, 0)
         bars_layout.setHorizontalSpacing(18)
         bars_layout.setVerticalSpacing(12)
@@ -391,8 +385,7 @@ class ComparePage(QWidget):
             bars_layout.addWidget(lab, i, 0)
             bars_layout.addWidget(bar, i, 1)
 
-        self.bars_widget.setVisible(False)
-        right_layout.addWidget(self.bars_widget)
+        right_layout.addWidget(bars_widget)
         right_layout.addStretch()
 
         # Bottom nav buttons

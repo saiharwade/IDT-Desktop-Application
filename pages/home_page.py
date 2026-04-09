@@ -524,7 +524,7 @@ class HomePage(QWidget):
         self.btn_history = SymbolButton("history")
         self.btn_settings = SymbolButton("settings")
 
-        self.btn_jewellery.clicked.connect(self.open_compare_page)
+        self.btn_report.clicked.connect(self.open_compare_page)
 
         icon_row.addWidget(self.btn_jewellery)
         icon_row.addWidget(self.btn_scan)

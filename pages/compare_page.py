@@ -2,6 +2,7 @@ import os
 from PyQt5.QtCore import Qt, QPointF, QRect
 from PyQt5.QtGui import QFont, QColor, QPainter, QPen, QPixmap, QPolygonF
 from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QLineEdit, QFrame
+from PyQt5.QtCore import pyqtSignal
 
 
 class ImageLabel(QLabel):
@@ -28,36 +29,107 @@ class ImageLabel(QLabel):
 
 
 class StripeBar(QWidget):
+    valueChanged = pyqtSignal(int)
+
     def __init__(self, filled=7, total=18, parent=None):
         super().__init__(parent)
-        self.filled = filled
+        self.filled = int(filled)
         self.total = total
+        self.setMouseTracking(True)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def value(self) -> int:
+        return int(self.filled)
+
+    def setValue(self, v: int):
+        v = int(v)
+        v = max(0, min(v, int(self.total)))
+        if v != int(self.filled):
+            self.filled = v
+            self.valueChanged.emit(v)
+            self.update()
+
+    def _value_from_pos(self, x: int) -> int:
+        w = max(1, self.width())
+        x = max(0, min(int(x), w - 1))
+
+        gap = max(1, int(w * 0.012))
+        seg_w = max(6, int((w - (int(self.total) - 1) * gap) / int(self.total)))
+        pitch = seg_w + gap
+
+        idx = int(x / pitch)
+        idx = max(0, min(idx, int(self.total) - 1))
+        # value is "filled segments count"
+        return idx + 1
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        gap = max(1, int(self.width() * 0.01))
-        seg_w = max(4, int((self.width() - (self.total - 1) * gap) / self.total))
-        seg_h = max(10, int(self.height() * 0.72))
-        y = max(1, int((self.height() - seg_h) / 2))
+        w = max(1, self.width())
+        h = max(1, self.height())
+
+        # Reference-style tapered segmented bar
+        outline = QColor("#EDC84A")
+        filled_col = QColor("#D9B63A")
+        empty_col = QColor("#F7F7F7")
+        empty_outline = QColor("#BFC3C7")
+        marker_col = QColor("#6F6F6F")
+
+        gap = max(1, int(w * 0.012))
+        seg_w = max(6, int((w - (self.total - 1) * gap) / self.total))
+        y_top = max(1, int(h * 0.14))
+        y_bot = max(y_top + 6, int(h * 0.86))
+
+        # Taper: left segments are thinner, gradually increase to full height
+        min_thickness = max(6, int(h * 0.22))
+        max_thickness = max(10, int(h * 0.72))
 
         for i in range(self.total):
-            x = i * (seg_w + gap)
-            points = QPolygonF(
+            x0 = i * (seg_w + gap)
+            x1 = x0 + seg_w
+
+            t0 = i / max(1, (self.total - 1))
+            t1 = (i + 1) / max(1, (self.total - 1))
+            th0 = min_thickness + (max_thickness - min_thickness) * t0
+            th1 = min_thickness + (max_thickness - min_thickness) * t1
+
+            # Build a trapezoid segment (top edge rises with taper)
+            seg = QPolygonF(
                 [
-                    QPointF(x, y + seg_h),
-                    QPointF(x + seg_w, y + seg_h - 2),
-                    QPointF(x + seg_w, y + 2),
-                    QPointF(x, y + 4),
+                    QPointF(x0, y_bot),
+                    QPointF(x1, y_bot),
+                    QPointF(x1, y_bot - th1),
+                    QPointF(x0, y_bot - th0),
                 ]
             )
+
             if i < self.filled:
-                painter.setBrush(QColor("#D9B63A"))
-                painter.setPen(QPen(QColor("#D9B63A"), 1))
+                painter.setBrush(filled_col)
+                painter.setPen(QPen(outline, 1))
             else:
-                painter.setBrush(QColor("#F0F0F0"))
-                painter.setPen(QPen(QColor("#D0D0D0"), 1))
-            painter.drawPolygon(points)
+                painter.setBrush(empty_col)
+                painter.setPen(QPen(empty_outline, 1))
+
+            painter.drawPolygon(seg)
+
+        # Center marker line (like reference)
+        marker_x = int(w * 0.50)
+        painter.setPen(QPen(marker_col, max(2, int(w * 0.01))))
+        painter.drawLine(marker_x, y_top, marker_x, y_bot)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.setValue(self._value_from_pos(event.x()))
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            self.setValue(self._value_from_pos(event.x()))
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
 
 
 class ComparePage(QWidget):
@@ -177,17 +249,45 @@ class ComparePage(QWidget):
         footer_right.setStyleSheet("color:#000000;background:transparent;")
         self._add_font(footer_right, "Poppins", 32, QFont.Medium)
 
-        # Right panel brand.
-        rp_logo = self._add_geo(ImageLabel(logo_path, self.canvas), 1448, 141, 52, 52)
+        # Right panel brand (centered block: logo + IDT centered as a group).
+        right_panel_x = 1362
+        right_panel_w = 558
+        right_center_x = right_panel_x + right_panel_w // 2  # 1641 in base coords
+
+        brand_block_y = 140
+        logo_w = 92
+        logo_h = 92
+        gap = 18
+        idt_w = 260
+        idt_h = 96
+        group_w = logo_w + gap + idt_w
+        group_left_x = right_center_x - group_w // 2
+
+        rp_logo = self._add_geo(ImageLabel(logo_path, self.canvas), group_left_x, brand_block_y, logo_w, logo_h)
         self._logo_widgets.append(rp_logo)
 
-        rp_idt = self._add_geo(QLabel("IDT", self.canvas), 1516, 143, 130, 58)
-        rp_idt.setStyleSheet("color:#3C2B22;background:transparent;")
-        self._add_font(rp_idt, "Inter", 44, QFont.Normal)
+        rp_idt = self._add_geo(
+            QLabel("IDT", self.canvas),
+            group_left_x + logo_w + gap,
+            brand_block_y - 2,
+            idt_w,
+            idt_h,
+        )
+        rp_idt.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        rp_idt.setStyleSheet("color:#2B2B2B;background:transparent;")
+        # Closer to reference: larger, elegant serif
+        self._add_font(rp_idt, "Times New Roman", 74, QFont.Normal)
 
-        rp_sub = self._add_geo(QLabel("IDT GEMOLOGICAL LABORATORIES WORLDWIDE", self.canvas), 1420, 210, 420, 24)
+        rp_sub = self._add_geo(
+            QLabel("IDT GEMOLOGICAL LABORATORIES WORLDWIDE", self.canvas),
+            right_panel_x,
+            brand_block_y + logo_h + 6,
+            right_panel_w,
+            30,
+        )
         rp_sub.setStyleSheet("color:#000000;background:transparent;")
-        self._add_font(rp_sub, "Poppins", 12, QFont.Medium)
+        rp_sub.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self._add_font(rp_sub, "Poppins", 15, QFont.Medium)
 
         # Inputs and labels.
         hpht = self._add_geo(QLabel("HPHT:", self.canvas), 1387, 297, 100, 40)

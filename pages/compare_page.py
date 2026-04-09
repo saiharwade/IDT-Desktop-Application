@@ -1,48 +1,30 @@
 import os
-from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtCore import Qt, QPointF, QRect
 from PyQt5.QtGui import QFont, QColor, QPainter, QPen, QPixmap, QPolygonF
-from PyQt5.QtWidgets import (
-    QWidget, QLabel, QPushButton, QLineEdit,
-    QHBoxLayout, QVBoxLayout, QGridLayout,
-    QFrame, QSizePolicy
-)
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QLineEdit, QFrame
 
 
 class ImageLabel(QLabel):
-    def __init__(self, image_path="", width=40, height=40, parent=None):
+    def __init__(self, image_path="", parent=None):
         super().__init__(parent)
-        self.setFixedSize(width, height)
         self.setAlignment(Qt.AlignCenter)
         self.setStyleSheet("border: none; background: transparent;")
-        self.set_image(image_path)
+        self._image_path = image_path
 
-    def set_image(self, image_path):
+    def refresh(self):
         self.clear()
-        self.setStyleSheet("border: none; background: transparent;")
-
-        if image_path and os.path.exists(image_path):
-            pixmap = QPixmap(image_path)
+        if self._image_path and os.path.exists(self._image_path):
+            pixmap = QPixmap(self._image_path)
             if not pixmap.isNull():
-                pixmap = pixmap.scaled(
-                    self.width(),
-                    self.height(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
+                scaled = pixmap.scaled(
+                    self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
-                self.setPixmap(pixmap)
+                self.setPixmap(scaled)
                 return
-
         self.setText("◎")
-        self.setStyleSheet("""
-            QLabel {
-                background-color: #E7C75D;
-                border: 1px solid #CFAE47;
-                border-radius: 17px;
-                color: #111111;
-                font-size: 15px;
-                font-weight: 700;
-            }
-        """)
+        self.setStyleSheet(
+            "background-color:#E7C75D;border:1px solid #CFAE47;border-radius:17px;color:#111111;"
+        )
 
 
 class StripeBar(QWidget):
@@ -50,394 +32,235 @@ class StripeBar(QWidget):
         super().__init__(parent)
         self.filled = filled
         self.total = total
-        self.setFixedSize(180, 18)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-
-        gap = 2
-        seg_w = 7
-        seg_h = 14
-        y = 2
+        gap = max(1, int(self.width() * 0.01))
+        seg_w = max(4, int((self.width() - (self.total - 1) * gap) / self.total))
+        seg_h = max(10, int(self.height() * 0.72))
+        y = max(1, int((self.height() - seg_h) / 2))
 
         for i in range(self.total):
             x = i * (seg_w + gap)
-            points = QPolygonF([
-                QPointF(x, y + seg_h),
-                QPointF(x + seg_w, y + seg_h - 2),
-                QPointF(x + seg_w, y + 2),
-                QPointF(x, y + 4)
-            ])
-
+            points = QPolygonF(
+                [
+                    QPointF(x, y + seg_h),
+                    QPointF(x + seg_w, y + seg_h - 2),
+                    QPointF(x + seg_w, y + 2),
+                    QPointF(x, y + 4),
+                ]
+            )
             if i < self.filled:
                 painter.setBrush(QColor("#D9B63A"))
                 painter.setPen(QPen(QColor("#D9B63A"), 1))
             else:
                 painter.setBrush(QColor("#F0F0F0"))
-                painter.setPen(QPen(QColor("#CFCFCF"), 1))
-
+                painter.setPen(QPen(QColor("#D0D0D0"), 1))
             painter.drawPolygon(points)
 
 
-class CompareViewBox(QFrame):
-    def __init__(self, title="", parent=None):
-        super().__init__(parent)
-        self.setStyleSheet("""
-            QFrame {
-                background-color: #F2F2F2;
-                border: 1px solid #DCC374;
-            }
-        """)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 6, 10, 10)
-        layout.setSpacing(0)
-
-        title_label = QLabel(title)
-        title_font = QFont("Segoe UI", 10)
-        title_label.setFont(title_font)
-        title_label.setStyleSheet("color: #8A8A8A; border: none;")
-        title_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-
-        layout.addWidget(title_label)
-        layout.addStretch()
-
-
 class ComparePage(QWidget):
+    BASE_W = 1920
+    BASE_H = 1200
+
     def __init__(self, stacked_widget=None):
         super().__init__()
         self.stacked_widget = stacked_widget
-        self.setStyleSheet("background-color: #F8F8F8;")
-        self.setup_ui()
+        self.setStyleSheet("background-color: #FFFFFF;")
+        self._geo = []
+        self._fonts = []
+        self._logo_widgets = []
+        self._line_edits = []
+        self._build_ui()
+        self._apply_scaled_layout()
 
     def go_home(self):
         if self.stacked_widget is not None:
             self.stacked_widget.setCurrentIndex(1)
 
-    def make_small_button(self, text, w=34, h=28):
-        btn = QPushButton(text)
-        btn.setFixedSize(w, h)
-        btn.setStyleSheet("""
+    def _add_geo(self, widget, x, y, w, h):
+        self._geo.append((widget, QRect(x, y, w, h)))
+        return widget
+
+    def _add_font(self, widget, family, px, weight=QFont.Normal, italic=False):
+        self._fonts.append((widget, family, px, weight, italic))
+        return widget
+
+    def _button_style(self):
+        return """
             QPushButton {
                 background-color: #F8F8F8;
-                border: 1px solid #DCC374;
-                border-radius: 5px;
-                color: #222222;
-                font-family: Segoe UI;
-                font-size: 10px;
-                font-weight: 500;
+                border: 1px solid #EDC84A;
+                border-radius: 9px;
+                color: #000000;
             }
             QPushButton:hover {
                 background-color: #FCFCFC;
             }
-        """)
-        return btn
+        """
 
-    def make_action_button(self, text, w=110, h=30, font_size=10):
-        btn = QPushButton(text)
-        btn.setFixedSize(w, h)
-        btn.setStyleSheet(f"""
-            QPushButton {{
+    def _line_edit_style(self):
+        return """
+            QLineEdit {
                 background-color: #F8F8F8;
-                border: 1px solid #DCC374;
-                border-radius: 5px;
-                color: #222222;
-                font-family: Segoe UI;
-                font-size: {font_size}px;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: #FCFCFC;
-            }}
-        """)
-        return btn
-
-    def make_value_box(self, text="00", w=46, h=28):
-        box = QLabel(text)
-        box.setAlignment(Qt.AlignCenter)
-        box.setFixedSize(w, h)
-        box.setStyleSheet("""
-            QLabel {
-                background-color: #F8F8F8;
-                border: 1px solid #DCC374;
-                border-radius: 4px;
-                color: #333333;
-                font-family: Segoe UI;
-                font-size: 10px;
+                border: 1px solid #EDC84A;
+                border-radius: 10px;
+                color: #000000;
+                padding-left: 10px;
             }
-        """)
-        return box
+        """
 
-    def setup_ui(self):
-        gold_border = "#DCC374"
-        text_color = "#222222"
-
+    def _build_ui(self):
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(current_dir, "..", "assets", "images", "logo.jpeg")
-        logo_path = os.path.abspath(logo_path)
+        logo_path = os.path.abspath(os.path.join(current_dir, "..", "assets", "images", "logo.jpeg"))
 
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        self.canvas = QWidget(self)
+        self.canvas.setStyleSheet("background-color: #FFFFFF;")
+        self._add_geo(self.canvas, 0, 0, self.BASE_W, self.BASE_H)
 
-        # Top Bar
-        top_bar = QFrame()
-        top_bar.setFixedHeight(75)
-        top_bar.setStyleSheet(f"""
-            QFrame {{
-                background-color: #F8F8F8;
-                border-bottom: 1px solid {gold_border};
-            }}
-        """)
+        top_bar = self._add_geo(QFrame(self.canvas), 0, 0, 1920, 111)
+        top_bar.setStyleSheet("background-color:#F8F8F8;border-bottom:1px solid #EDC84A;")
 
-        top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(12, 10, 12, 10)
-        top_layout.setSpacing(0)
+        left_bg = self._add_geo(QFrame(self.canvas), 0, 112, 1362, 1009)
+        left_bg.setStyleSheet("background-color:#F3F3F3;border:none;")
 
-        left_widget = QWidget()
-        left_layout = QHBoxLayout(left_widget)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(10)
+        right_bg = self._add_geo(QFrame(self.canvas), 1362, 112, 558, 1009)
+        right_bg.setStyleSheet("background-color:#FAFAFA;border-left:1px solid #EDC84A;")
 
-        logo_circle = ImageLabel(logo_path, 32, 32)
+        footer = self._add_geo(QFrame(self.canvas), 0, 1121, 1920, 79)
+        footer.setStyleSheet("background-color:#F8F8F8;border-top:1px solid #EDC84A;")
 
-        brand_text = QLabel("SYD-PRO")
-        brand_font = QFont("Segoe UI", 16)
-        brand_font.setBold(True)
-        brand_text.setFont(brand_font)
-        brand_text.setStyleSheet(f"color: {text_color};")
+        # Left four result regions with Figma split lines.
+        for x, y, w, h in [(0, 112, 682, 499), (682, 112, 680, 499), (0, 611, 682, 510), (682, 611, 680, 510)]:
+            box = self._add_geo(QFrame(self.canvas), x, y, w, h)
+            box.setStyleSheet("background-color:#F3F3F3;border:1px solid #EDC84A;")
 
-        left_layout.addWidget(logo_circle)
-        left_layout.addWidget(brand_text)
-        left_layout.addStretch()
+        small_labels = [
+            ("Result", 21, 124),
+            ("Flourescense", 702, 124),
+            ("Short Phosphorous", 21, 623),
+            ("Long Phosphorous", 702, 620),
+        ]
+        for text, x, y in small_labels:
+            lbl = self._add_geo(QLabel(text, self.canvas), x, y, 320, 32)
+            lbl.setStyleSheet("color: rgba(0,0,0,0.6); background: transparent;")
+            self._add_font(lbl, "Poppins", 27, QFont.Light)
 
-        title = QLabel("COMPARE")
-        title_font = QFont("Segoe UI", 16)
-        title_font.setBold(True)
-        title.setFont(title_font)
-        title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet(f"color: {text_color};")
+        logo_small = self._add_geo(ImageLabel(logo_path, self.canvas), 20, 14, 72, 72)
+        self._logo_widgets.append(logo_small)
 
-        right_space = QWidget()
+        brand = self._add_geo(QLabel("SYD-PRO", self.canvas), 141, 22, 220, 56)
+        brand.setStyleSheet("color:#000000;background:transparent;")
+        self._add_font(brand, "Inter", 44, QFont.Normal)
 
-        top_layout.addWidget(left_widget, 1)
-        top_layout.addWidget(title, 1)
-        top_layout.addWidget(right_space, 1)
+        title = self._add_geo(QLabel("COMPARE", self.canvas), 895, 28, 240, 52)
+        title.setStyleSheet("color:#000000;background:transparent;")
+        self._add_font(title, "Poppins", 39, QFont.Bold)
 
-        # Center
-        center_frame = QFrame()
-        center_frame.setStyleSheet("background-color: #F8F8F8;")
-        center_layout = QHBoxLayout(center_frame)
-        center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(0)
+        footer_left = self._add_geo(QLabel("IDT Gemological Laborateries Worldwide", self.canvas), 68, 1143, 740, 49)
+        footer_left.setStyleSheet("color:#000000;background:transparent;")
+        self._add_font(footer_left, "Poppins", 30, QFont.Medium)
 
-        # Left compare area
-        left_area = QWidget()
-        left_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        left_grid = QGridLayout(left_area)
-        left_grid.setContentsMargins(0, 0, 0, 0)
-        left_grid.setSpacing(0)
+        footer_right = self._add_geo(QLabel("www.idtworldwide.com", self.canvas), 1476, 1136, 390, 48)
+        footer_right.setStyleSheet("color:#000000;background:transparent;")
+        self._add_font(footer_right, "Poppins", 32, QFont.Medium)
 
-        box1 = CompareViewBox("Result")
-        box2 = CompareViewBox("Flourescence")
-        box3 = CompareViewBox("Short Phosphorous")
-        box4 = CompareViewBox("Long Phosphorous")
+        # Right panel brand.
+        rp_logo = self._add_geo(ImageLabel(logo_path, self.canvas), 1448, 141, 52, 52)
+        self._logo_widgets.append(rp_logo)
 
-        left_grid.addWidget(box1, 0, 0)
-        left_grid.addWidget(box2, 0, 1)
-        left_grid.addWidget(box3, 1, 0)
-        left_grid.addWidget(box4, 1, 1)
+        rp_idt = self._add_geo(QLabel("IDT", self.canvas), 1516, 143, 130, 58)
+        rp_idt.setStyleSheet("color:#3C2B22;background:transparent;")
+        self._add_font(rp_idt, "Inter", 44, QFont.Normal)
 
-        # Right panel
-        right_panel = QFrame()
-        right_panel.setFixedWidth(570)
-        right_panel.setStyleSheet(f"""
-            QFrame {{
-                background-color: #FAFAFA;
-                border-left: 1px solid {gold_border};
-            }}
-        """)
+        rp_sub = self._add_geo(QLabel("IDT GEMOLOGICAL LABORATORIES WORLDWIDE", self.canvas), 1420, 210, 420, 24)
+        rp_sub.setStyleSheet("color:#000000;background:transparent;")
+        self._add_font(rp_sub, "Poppins", 12, QFont.Medium)
 
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(22, 16, 22, 16)
-        right_layout.setSpacing(12)
+        # Inputs and labels.
+        hpht = self._add_geo(QLabel("HPHT:", self.canvas), 1387, 297, 100, 40)
+        cvd = self._add_geo(QLabel("CVD:", self.canvas), 1386, 366, 100, 40)
+        for lbl in [hpht, cvd]:
+            lbl.setStyleSheet("color:#000000;background:transparent;")
+            self._add_font(lbl, "Poppins", 27, QFont.Light)
 
-        # Logo block
-        logo_row = QHBoxLayout()
-        logo_row.setContentsMargins(0, 0, 0, 0)
-        logo_row.setSpacing(8)
+        self.hpht_input = self._add_geo(QLineEdit(self.canvas), 1518, 299, 331, 40)
+        self.cvd_input = self._add_geo(QLineEdit(self.canvas), 1518, 366, 331, 40)
+        for le in [self.hpht_input, self.cvd_input]:
+            le.setStyleSheet(self._line_edit_style())
+            self._add_font(le, "Poppins", 20, QFont.Normal)
+            self._line_edits.append(le)
 
-        company_logo = ImageLabel(logo_path, 52, 52)
+        # Step controls.
+        self.plus_btn = self._add_geo(QPushButton("+", self.canvas), 1566, 436, 61, 40)
+        self.value_lbl = self._add_geo(QLabel("00", self.canvas), 1638, 436, 91, 40)
+        self.minus_btn = self._add_geo(QPushButton("-", self.canvas), 1740, 436, 61, 40)
+        for b in [self.plus_btn, self.minus_btn]:
+            b.setStyleSheet(self._button_style())
+            self._add_font(b, "Poppins", 27, QFont.Light)
+        self.value_lbl.setAlignment(Qt.AlignCenter)
+        self.value_lbl.setStyleSheet("background-color:#F8F8F8;border:1px solid #EDC84A;border-radius:10px;color:#000000;")
+        self._add_font(self.value_lbl, "Poppins", 27, QFont.Light)
 
-        logo_top = QLabel("IDT")
-        logo_top_font = QFont("Times New Roman", 34)
-        logo_top.setFont(logo_top_font)
-        logo_top.setStyleSheet("color: #3C2B22; border: none;")
+        # Action buttons.
+        self.high_gain_btn = self._add_geo(QPushButton("High gain", self.canvas), 1389, 526, 203, 40)
+        self.simulant_btn = self._add_geo(QPushButton("Simulant", self.canvas), 1646, 526, 203, 40)
+        self.advance_btn = self._add_geo(QPushButton("Advance Analysis", self.canvas), 1497, 599, 262, 40)
+        for b in [self.high_gain_btn, self.simulant_btn, self.advance_btn]:
+            b.setStyleSheet(self._button_style())
+            self._add_font(b, "Poppins", 27, QFont.Light)
 
-        logo_row.addStretch()
-        logo_row.addWidget(company_logo)
-        logo_row.addWidget(logo_top)
-        logo_row.addStretch()
-
-        logo_widget = QWidget()
-        logo_widget.setLayout(logo_row)
-
-        logo_sub = QLabel("IDT GEMOLOGICAL LABORATORIES WORLDWIDE")
-        logo_sub_font = QFont("Segoe UI", 6)
-        logo_sub.setFont(logo_sub_font)
-        logo_sub.setAlignment(Qt.AlignCenter)
-        logo_sub.setStyleSheet("color: #111111; border: none;")
-
-        right_layout.addWidget(logo_widget)
-        right_layout.addWidget(logo_sub)
-
-        # Inputs - refined
-        form_widget = QWidget()
-        form_layout = QGridLayout(form_widget)
-        form_layout.setContentsMargins(20, 12, 20, 0)
-        form_layout.setHorizontalSpacing(20)
-        form_layout.setVerticalSpacing(16)
-
-        label_font = QFont("Segoe UI", 12)
-        input_font = QFont("Segoe UI", 12)
-
-        for row, txt in enumerate(["HPHT:", "CVD:"]):
-            lab = QLabel(txt)
-            lab.setFont(label_font)
-            lab.setStyleSheet("color: #333333; border: none;")
-
-            inp = QLineEdit()
-            inp.setFont(input_font)
-            inp.setFixedHeight(32)
-            inp.setStyleSheet(f"""
-                QLineEdit {{
-                    background: #F8F8F8;
-                    border: 1px solid {gold_border};
-                    border-radius: 5px;
-                    padding-left: 10px;
-                    color: #222222;
-                }}
-            """)
-
-            form_layout.addWidget(lab, row, 0, alignment=Qt.AlignLeft)
-            form_layout.addWidget(inp, row, 1)
-
-        right_layout.addWidget(form_widget)
-
-        # + 00 -
-        step_row = QHBoxLayout()
-        step_row.setContentsMargins(0, 10, 0, 0)
-        step_row.setSpacing(12)
-        step_row.setAlignment(Qt.AlignCenter)
-
-        plus_btn = self.make_small_button("+", 30, 28)
-        minus_btn = self.make_small_button("−", 30, 28)
-        value_box = self.make_value_box("00", 46, 28)
-
-        step_row.addWidget(plus_btn)
-        step_row.addWidget(value_box)
-        step_row.addWidget(minus_btn)
-
-        right_layout.addLayout(step_row)
-
-        # High gain / Simulant
-        row_btns = QHBoxLayout()
-        row_btns.setContentsMargins(0, 10, 0, 0)
-        row_btns.setSpacing(18)
-        row_btns.setAlignment(Qt.AlignCenter)
-
-        high_gain_btn = self.make_action_button("High gain", 110, 28, 9)
-        simulant_btn = self.make_action_button("Simulant", 100, 28, 9)
-
-        row_btns.addWidget(high_gain_btn)
-        row_btns.addWidget(simulant_btn)
-
-        right_layout.addLayout(row_btns)
-
-        # Advance Analysis
-        adv_btn = self.make_action_button("Advance Analysis", 150, 30, 9)
-        adv_wrap = QHBoxLayout()
-        adv_wrap.setContentsMargins(0, 6, 0, 0)
-        adv_wrap.setAlignment(Qt.AlignCenter)
-        adv_wrap.addWidget(adv_btn)
-
-        right_layout.addLayout(adv_wrap)
-
-        # Bars
-        bars_widget = QWidget()
-        bars_layout = QGridLayout(bars_widget)
-        bars_layout.setContentsMargins(60, 10, 60, 0)
-        bars_layout.setHorizontalSpacing(18)
-        bars_layout.setVerticalSpacing(12)
-
-        bar_labels = ["Gain:", "Exposer:", "Shutter:", "ISO:"]
+        # Meter labels and bars.
+        meter_labels = [("Gain:", 1388, 677), ("Exposer:", 1387, 735), ("Shutter:", 1387, 791), ("ISO:", 1386, 851)]
         fills = [7, 6, 5, 5]
+        self.meter_bars = []
+        for (txt, x, y), f in zip(meter_labels, fills):
+            lbl = self._add_geo(QLabel(txt, self.canvas), x, y, 130, 32)
+            lbl.setStyleSheet("color:#000000;background:transparent;")
+            self._add_font(lbl, "Poppins", 27, QFont.Light)
+            bar = self._add_geo(StripeBar(f, 18, self.canvas), 1518, y, 331, 28)
+            self.meter_bars.append(bar)
 
-        for i, (txt, fill) in enumerate(zip(bar_labels, fills)):
-            lab = QLabel(txt)
-            lab.setFont(QFont("Segoe UI", 10))
-            lab.setStyleSheet("color: #333333; border: none;")
+        # Bottom navigation.
+        self.home_btn = self._add_geo(QPushButton("Home", self.canvas), 1393, 995, 106, 52)
+        self.result_btn = self._add_geo(QPushButton("Result", self.canvas), 1541, 995, 94, 52)
+        self.cert_btn = self._add_geo(QPushButton("Certificate", self.canvas), 1678, 995, 171, 52)
+        for b in [self.home_btn, self.result_btn, self.cert_btn]:
+            b.setStyleSheet(self._button_style())
+            self._add_font(b, "Poppins", 21, QFont.Medium)
 
-            bar = StripeBar(fill)
+        self.home_btn.clicked.connect(self.go_home)
 
-            bars_layout.addWidget(lab, i, 0)
-            bars_layout.addWidget(bar, i, 1)
+    def _apply_scaled_layout(self):
+        sx = self.width() / float(self.BASE_W) if self.BASE_W else 1.0
+        sy = self.height() / float(self.BASE_H) if self.BASE_H else 1.0
+        sf = min(sx, sy)
 
-        right_layout.addWidget(bars_widget)
-        right_layout.addStretch()
+        for widget, rect in self._geo:
+            widget.setGeometry(
+                int(rect.x() * sx),
+                int(rect.y() * sy),
+                max(1, int(rect.width() * sx)),
+                max(1, int(rect.height() * sy)),
+            )
 
-        # Bottom nav buttons
-        nav_row = QHBoxLayout()
-        nav_row.setContentsMargins(40, 0, 40, 0)
-        nav_row.setSpacing(16)
+        for widget, family, px, weight, italic in self._fonts:
+            font = QFont(family)
+            font.setWeight(weight)
+            font.setItalic(italic)
+            font.setPixelSize(max(8, int(px * sf)))
+            widget.setFont(font)
 
-        home_btn = self.make_action_button("Home", 72, 28, 9)
-        result_btn = self.make_action_button("Result", 72, 28, 9)
-        cert_btn = self.make_action_button("Certificate", 100, 28, 9)
+        radius = max(4, int(10 * sf))
+        for le in self._line_edits:
+            le.setStyleSheet(
+                f"QLineEdit{{background-color:#F8F8F8;border:1px solid #EDC84A;border-radius:{radius}px;color:#000000;padding-left:{max(6, int(10*sf))}px;}}"
+            )
 
-        home_btn.clicked.connect(self.go_home)
+        for logo in self._logo_widgets:
+            logo.refresh()
 
-        nav_row.addStretch()
-        nav_row.addWidget(home_btn)
-        nav_row.addWidget(result_btn)
-        nav_row.addWidget(cert_btn)
-        nav_row.addStretch()
-
-        right_layout.addLayout(nav_row)
-
-        center_layout.addWidget(left_area, 1)
-        center_layout.addWidget(right_panel, 0)
-
-        # Footer
-        footer = QFrame()
-        footer.setFixedHeight(48)
-        footer.setStyleSheet(f"""
-            QFrame {{
-                background-color: #F8F8F8;
-                border-top: 1px solid {gold_border};
-            }}
-        """)
-
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(24, 6, 24, 6)
-
-        footer_left = QLabel("IDT Gemological Laboratories Worldwide")
-        footer_right = QLabel("www.idtworldwide.com")
-
-        footer_font = QFont("Segoe UI", 12)
-        footer_font.setBold(True)
-        footer_left.setFont(footer_font)
-        footer_right.setFont(footer_font)
-
-        footer_left.setStyleSheet("color: #111111;")
-        footer_right.setStyleSheet("color: #111111;")
-
-        footer_layout.addWidget(footer_left)
-        footer_layout.addStretch()
-        footer_layout.addWidget(footer_right)
-
-        main_layout.addWidget(top_bar)
-        main_layout.addWidget(center_frame)
-        main_layout.addWidget(footer)
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_scaled_layout()

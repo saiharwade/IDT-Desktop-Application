@@ -72,12 +72,23 @@ class ComparePage(QWidget):
         self._fonts = []
         self._logo_widgets = []
         self._line_edits = []
+        self._advanced_open = False
+        self._advanced_widgets = []
         self._build_ui()
+        self._set_advanced_open(False)
         self._apply_scaled_layout()
 
     def go_home(self):
         if self.stacked_widget is not None:
             self.stacked_widget.setCurrentIndex(1)
+
+    def _set_advanced_open(self, is_open: bool):
+        self._advanced_open = bool(is_open)
+        for w in self._advanced_widgets:
+            w.setVisible(self._advanced_open)
+
+    def _toggle_advanced(self):
+        self._set_advanced_open(not self._advanced_open)
 
     def _add_geo(self, widget, x, y, w, h):
         self._geo.append((widget, QRect(x, y, w, h)))
@@ -210,6 +221,7 @@ class ComparePage(QWidget):
         for b in [self.high_gain_btn, self.simulant_btn, self.advance_btn]:
             b.setStyleSheet(self._button_style())
             self._add_font(b, "Poppins", 27, QFont.Light)
+        self.advance_btn.clicked.connect(self._toggle_advanced)
 
         # Meter labels and bars.
         meter_labels = [("Gain:", 1388, 677), ("Exposer:", 1387, 735), ("Shutter:", 1387, 791), ("ISO:", 1386, 851)]
@@ -221,6 +233,7 @@ class ComparePage(QWidget):
             self._add_font(lbl, "Poppins", 27, QFont.Light)
             bar = self._add_geo(StripeBar(f, 18, self.canvas), 1518, y, 331, 28)
             self.meter_bars.append(bar)
+            self._advanced_widgets.extend([lbl, bar])
 
         # Bottom navigation.
         self.home_btn = self._add_geo(QPushButton("Home", self.canvas), 1393, 995, 106, 52)

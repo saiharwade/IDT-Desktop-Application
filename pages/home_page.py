@@ -91,7 +91,8 @@ class SymbolButton(QPushButton):
         super().__init__(parent)
         self.kind = kind
         self.has_arrow = has_arrow
-        self.setFixedSize(96, 96)
+        # Match Figma Desktop-3 icon tile (60 x 61)
+        self.setFixedSize(60, 61)
         self.setCursor(Qt.PointingHandCursor)
         self.setStyleSheet("""
             QPushButton {
@@ -104,18 +105,19 @@ class SymbolButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Reference look: soft golden fill, subtle shadow, thin orange border.
-        shadow = QRectF(6, 7, self.width() - 12, self.height() - 12)
+        # Figma style: flat golden tile with inset shadow and small radius.
+        outer = QRectF(0.5, 0.5, self.width() - 1, self.height() - 2)
+        # base fill
+        painter.setPen(QPen(QColor("#EDC84A"), 1))
+        painter.setBrush(QColor("#FFE693"))
+        painter.drawRoundedRect(outer, 10, 10)
+        # inner inset shadow at top
+        inset = outer.adjusted(0, 0, 0, -1)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(0, 0, 0, 28))
-        painter.drawRoundedRect(shadow, 20, 20)
+        painter.setBrush(QColor(224, 178, 27, 80))
+        painter.drawRoundedRect(inset, 10, 10)
 
-        outer = QRectF(5, 5, self.width() - 12, self.height() - 12)
-        painter.setPen(QPen(QColor("#E3B338"), 2))
-        painter.setBrush(QColor("#F7E09A"))
-        painter.drawRoundedRect(outer, 20, 20)
-
-        painter.setPen(QPen(QColor("#000000"), 4.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        painter.setPen(QPen(QColor("#000000"), 3.2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.setBrush(QColor("#111111"))
 
         if self.kind == "jewellery":
@@ -133,101 +135,135 @@ class SymbolButton(QPushButton):
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor("#000000"))
             arrow = QPolygonF([
-                QPointF(self.width() - 26, self.height() - 26),
-                QPointF(self.width() - 14, self.height() - 26),
-                QPointF(self.width() - 20, self.height() - 16)
+                QPointF(self.width() - 12, self.height() - 10),
+                QPointF(self.width() - 6, self.height() - 10),
+                QPointF(self.width() - 9, self.height() - 5)
             ])
             painter.drawPolygon(arrow)
 
     def draw_jewellery_icon(self, painter):
-        points = [
-            QPointF(20, 26), QPointF(26, 31), QPointF(33, 35),
-            QPointF(41, 37), QPointF(49, 35), QPointF(56, 31), QPointF(62, 26)
-        ]
+        # Diamond icon (replaces necklace)
+        cx, cy = self.width() / 2.0, self.height() / 2.0
 
-        for p in points:
-            painter.drawEllipse(p, 2.4, 2.4)
+        top = QPointF(cx, cy - 20)
+        left = QPointF(cx - 22, cy - 6)
+        right = QPointF(cx + 22, cy - 6)
+        bottom = QPointF(cx, cy + 26)
 
-        for i in range(len(points) - 1):
-            painter.drawLine(points[i], points[i + 1])
-
-        painter.drawLine(41, 37, 41, 46)
-
-        drop = QPolygonF([
-            QPointF(41, 46),
-            QPointF(36, 55),
-            QPointF(41, 61),
-            QPointF(46, 55)
-        ])
+        # Outer diamond
+        outer = QPolygonF([top, right, bottom, left])
         painter.setBrush(Qt.NoBrush)
-        painter.drawPolygon(drop)
-        painter.setBrush(QColor("#111111"))
+        painter.drawPolygon(outer)
+
+        # Upper facets
+        mid_top = QPointF(cx, cy - 6)
+        painter.drawLine(top, mid_top)
+        painter.drawLine(left, mid_top)
+        painter.drawLine(right, mid_top)
+
+        # Lower facets
+        painter.drawLine(mid_top, bottom)
+        painter.drawLine(left, bottom)
+        painter.drawLine(right, bottom)
+
+        # Small sparkle (top-right)
+        s = 6
+        sx, sy = cx + 24, cy - 22
+        painter.drawLine(QPointF(sx - s, sy), QPointF(sx + s, sy))
+        painter.drawLine(QPointF(sx, sy - s), QPointF(sx, sy + s))
 
     def draw_scan_icon(self, painter):
-        painter.drawLine(22, 22, 22, 36)
-        painter.drawLine(22, 22, 36, 22)
+        # Centered focus-frame + "A" like reference
+        w, h = self.width(), self.height()
+        cx, cy = w / 2.0, h / 2.0
+        pad = 18
+        left = cx - (w / 2.0 - pad)
+        right = cx + (w / 2.0 - pad)
+        top = cy - (h / 2.0 - pad)
+        bottom = cy + (h / 2.0 - pad)
 
-        painter.drawLine(58, 22, 44, 22)
-        painter.drawLine(58, 22, 58, 36)
+        # Corner brackets
+        br_len = 16
+        painter.drawLine(QPointF(left, top + br_len), QPointF(left, top))
+        painter.drawLine(QPointF(left, top), QPointF(left + br_len, top))
 
-        painter.drawLine(22, 58, 22, 44)
-        painter.drawLine(22, 58, 36, 58)
+        painter.drawLine(QPointF(right - br_len, top), QPointF(right, top))
+        painter.drawLine(QPointF(right, top), QPointF(right, top + br_len))
 
-        painter.drawLine(58, 58, 44, 58)
-        painter.drawLine(58, 58, 58, 44)
+        painter.drawLine(QPointF(left, bottom - br_len), QPointF(left, bottom))
+        painter.drawLine(QPointF(left, bottom), QPointF(left + br_len, bottom))
 
-        font = QFont("Segoe UI", 16, QFont.Bold)
+        painter.drawLine(QPointF(right - br_len, bottom), QPointF(right, bottom))
+        painter.drawLine(QPointF(right, bottom), QPointF(right, bottom - br_len))
+
+        # Center letter
+        font = QFont("Segoe UI", 24, QFont.Bold)
         painter.setFont(font)
         painter.drawText(QRectF(0, 0, self.width(), self.height()), Qt.AlignCenter, "M")
 
     def draw_report_icon(self, painter):
+        # Centered report page with diamond
+        w, h = self.width(), self.height()
+        cx, cy = w / 2.0, h / 2.0
+
+        page_w, page_h = w * 0.42, h * 0.52
+        page_x = cx - page_w / 2.0
+        page_y = cy - page_h / 2.0
+
         page = QPainterPath()
-        page.moveTo(26, 18)
-        page.lineTo(45, 18)
-        page.lineTo(54, 27)
-        page.lineTo(54, 54)
-        page.lineTo(26, 54)
-        page.closeSubpath()
+        page.addRect(page_x, page_y, page_w, page_h)
         painter.setBrush(QColor("#111111"))
         painter.drawPath(page)
 
-        painter.setPen(QPen(QColor("#F2DE8F"), 2))
-        painter.drawLine(31, 26, 42, 26)
-        painter.drawLine(31, 31, 46, 31)
-        painter.drawLine(31, 36, 40, 36)
+        painter.setPen(QPen(QColor("#F7E09A"), 2))
+        line_y1 = page_y + page_h * 0.20
+        line_y2 = page_y + page_h * 0.30
+        line_y3 = page_y + page_h * 0.40
+        painter.drawLine(QPointF(page_x + 8, line_y1), QPointF(page_x + page_w * 0.65, line_y1))
+        painter.drawLine(QPointF(page_x + 8, line_y2), QPointF(page_x + page_w * 0.72, line_y2))
+        painter.drawLine(QPointF(page_x + 8, line_y3), QPointF(page_x + page_w * 0.55, line_y3))
 
-        diamond = QPolygonF([
-            QPointF(35, 40),
-            QPointF(44, 40),
-            QPointF(49, 45),
-            QPointF(39.5, 53),
-            QPointF(30, 45)
-        ])
+        # Diamond icon centered in lower part
+        dy_top = QPointF(cx, page_y + page_h * 0.55)
+        dy_left = QPointF(cx - page_w * 0.18, page_y + page_h * 0.70)
+        dy_right = QPointF(cx + page_w * 0.18, page_y + page_h * 0.70)
+        dy_bottom = QPointF(cx, page_y + page_h * 0.88)
+        diamond = QPolygonF([dy_top, dy_right, dy_bottom, dy_left])
         painter.drawPolygon(diamond)
-        painter.drawLine(QPointF(35, 40), QPointF(39.5, 53))
-        painter.drawLine(QPointF(44, 40), QPointF(39.5, 53))
-        painter.drawLine(QPointF(39.5, 40), QPointF(39.5, 53))
-
-        painter.setPen(QPen(QColor("#111111"), 3))
-        painter.setBrush(QColor("#111111"))
-        fold = QPolygonF([QPointF(45, 18), QPointF(54, 27), QPointF(45, 27)])
-        painter.drawPolygon(fold)
+        painter.drawLine(dy_top, dy_bottom)
+        painter.drawLine(dy_left, dy_bottom)
+        painter.drawLine(dy_right, dy_bottom)
 
     def draw_history_icon(self, painter):
+        # Circular history arrow centered
         painter.setBrush(Qt.NoBrush)
-        painter.setPen(QPen(QColor("#111111"), 3.8, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        painter.drawArc(23, 21, 28, 28, 35 * 16, 300 * 16)
-        painter.drawLine(27, 24, 19, 29)
-        painter.drawLine(19, 29, 19, 20)
-        painter.drawLine(37, 28, 37, 37)
-        painter.drawLine(37, 37, 45, 42)
+        painter.setPen(QPen(QColor("#111111"), 4.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+
+        w, h = self.width(), self.height()
+        cx, cy = w / 2.0, h / 2.0
+        r = min(w, h) * 0.22
+        rect = QRectF(cx - r, cy - r, 2 * r, 2 * r)
+
+        painter.drawArc(rect, 40 * 16, 280 * 16)
+
+        # Arrow head
+        tip = QPointF(cx - r * 0.9, cy - r * 0.1)
+        wing1 = QPointF(tip.x() - 6, tip.y() + 8)
+        wing2 = QPointF(tip.x() + 2, tip.y() + 8)
+        painter.drawLine(tip, wing1)
+        painter.drawLine(tip, wing2)
+
+        # Clock hands
+        painter.drawLine(QPointF(cx, cy), QPointF(cx, cy - r * 0.6))
+        painter.drawLine(QPointF(cx, cy), QPointF(cx + r * 0.6, cy))
 
     def draw_settings_icon(self, painter):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor("#111111"))
 
-        cx, cy = 36, 36
-        r_outer, r_inner = 18, 12
+        w, h = self.width(), self.height()
+        cx, cy = w / 2.0, h / 2.0
+        r_outer, r_inner = min(w, h) * 0.28, min(w, h) * 0.20
         pts = []
         for i in range(16):
             angle = math.radians(i * 22.5)
@@ -236,7 +272,7 @@ class SymbolButton(QPushButton):
 
         painter.drawPolygon(QPolygonF(pts))
         painter.setBrush(QColor("#F2DE8F"))
-        painter.drawEllipse(QPointF(cx, cy), 5.8, 5.8)
+        painter.drawEllipse(QPointF(cx, cy), min(w, h) * 0.09, min(w, h) * 0.09)
 
 
 class FocusSlider(QSlider):

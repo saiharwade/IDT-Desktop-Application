@@ -91,7 +91,7 @@ class SymbolButton(QPushButton):
         super().__init__(parent)
         self.kind = kind
         self.has_arrow = has_arrow
-        self.setFixedSize(72, 72)
+        self.setFixedSize(96, 96)
         self.setCursor(Qt.PointingHandCursor)
         self.setStyleSheet("""
             QPushButton {
@@ -104,12 +104,18 @@ class SymbolButton(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        outer = QRectF(4, 4, self.width() - 8, self.height() - 8)
-        painter.setPen(QPen(QColor("#D9B63A"), 2))
-        painter.setBrush(QColor("#F2DE8F"))
-        painter.drawRoundedRect(outer, 15, 15)
+        # Reference look: soft golden fill, subtle shadow, thin orange border.
+        shadow = QRectF(6, 7, self.width() - 12, self.height() - 12)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(0, 0, 0, 28))
+        painter.drawRoundedRect(shadow, 20, 20)
 
-        painter.setPen(QPen(QColor("#111111"), 3.2, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        outer = QRectF(5, 5, self.width() - 12, self.height() - 12)
+        painter.setPen(QPen(QColor("#E3B338"), 2))
+        painter.setBrush(QColor("#F7E09A"))
+        painter.drawRoundedRect(outer, 20, 20)
+
+        painter.setPen(QPen(QColor("#000000"), 4.0, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.setBrush(QColor("#111111"))
 
         if self.kind == "jewellery":
@@ -125,11 +131,11 @@ class SymbolButton(QPushButton):
 
         if self.has_arrow:
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor("#111111"))
+            painter.setBrush(QColor("#000000"))
             arrow = QPolygonF([
-                QPointF(self.width() - 18, self.height() - 18),
-                QPointF(self.width() - 8, self.height() - 18),
-                QPointF(self.width() - 13, self.height() - 10)
+                QPointF(self.width() - 26, self.height() - 26),
+                QPointF(self.width() - 14, self.height() - 26),
+                QPointF(self.width() - 20, self.height() - 16)
             ])
             painter.drawPolygon(arrow)
 
